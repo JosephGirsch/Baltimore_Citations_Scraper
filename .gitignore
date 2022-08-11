@@ -1,0 +1,4 @@
+# Ignore contents of old folder
+old/
+# but keep the old folder itself (by using a .gitkeep file in the folder)
+!old/.gitkeep 
