@@ -1,7 +1,18 @@
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+import pandas as pd
+import numpy as np
+import time 
+from datetime import timedelta, datetime
+import datetime as dt
 
+# 8/13/2022 Correction to Deprecation Error
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 def baltimore_city_scraper(citations_or_violations = "violations"):
-    print("You have started the %s scrapping tool."%citations_or_violations)
+    print("You have started the %s scrapping tool."%citations_or_violations, "for: http://cels.baltimorehousing.org/Search_On_Map.aspx")
     scrapperColumnsDict = {"violations":["Address", "Type", "Date_Notice", "Notice_Number", "District", "Neighborhood"],
                            "citations":["Photo","Citation Number", "Description", "Address", "Issue Date", "District", "Neighborhood"]}
     
@@ -10,17 +21,15 @@ def baltimore_city_scraper(citations_or_violations = "violations"):
     scrapper_output = pd.DataFrame()
     scrapper_output_index = 0
     main_page = "http://cels.baltimorehousing.org/Search_On_Map.aspx"
-
-
-    # initialize chrome options, do not load images since we don't need them.
-    chrome_options = webdriver.ChromeOptions()
-    prefs = {"profile.managed_default_content_settings.images": 2}
-    chrome_options.add_experimental_option("prefs", prefs)
-
-    # Initiate the driver for chrome.
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    # driver = webdriver.Chrome(executable_path="C:\Program Files (x86)\chromedriver.exe", options=chrome_options)
-
+    
+    # 8/13/2022 Correction to deprecation error implemented here.
+    prefs = {"profile.managed_default_content_settings.images": 2} # initialize chrome options, do not load images since we don't need them.
+    options = Options()
+    options.add_argument("start-maximized")
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    options.add_experimental_option("prefs", prefs)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options) #Initiate the driver for chrome.
+    
     # make a get request from the page.
     driver.get(main_page)
     time.sleep(1)
@@ -35,7 +44,7 @@ def baltimore_city_scraper(citations_or_violations = "violations"):
             cities.append(opt.text.strip())
 
     city_index = 0
-    for city in cities:
+    for city in cities[0:10]:
         try:
             start_time_city = time.time()
             city_index = city_index+1
@@ -45,22 +54,22 @@ def baltimore_city_scraper(citations_or_violations = "violations"):
             time.sleep(1)
 
             # select "by neighbourhood".
-            driver.find_element_by_id("ctl00_ContentPlaceHolder1_ck2").click()
+            driver.find_element("id", "ctl00_ContentPlaceHolder1_ck2").click() # 8/13/2022 Correction to deprecation error implemented here.
 
             # select "Violation" or "Citation"
             if citations_or_violations.lower() == "violations":
-                driver.find_element_by_id("ctl00_ContentPlaceHolder1_rbVC_0").click()
+                driver.find_element("id", "ctl00_ContentPlaceHolder1_rbVC_0").click()  # 8/13/2022 Correction to deprecation error implemented here.
             elif citations_or_violations.lower() == "citations":
-                driver.find_element_by_id("ctl00_ContentPlaceHolder1_rbVC_1").click()
+                driver.find_element("id", "ctl00_ContentPlaceHolder1_rbVC_1").click()  # 8/13/2022 Correction to deprecation error implemented here.
             else:
                 print("ERROR. YOU NEED  TO SELECT \"violations\" or \"citations\"")
                 return
 
             # select city.
-            driver.find_element_by_id("ctl00_ContentPlaceHolder1_lstLoc").send_keys(city)
+            driver.find_element("id", "ctl00_ContentPlaceHolder1_lstLoc").send_keys(city)  # 8/13/2022 Correction to deprecation error implemented here.
 
             # click search.
-            driver.find_element_by_id("ctl00_ContentPlaceHolder1_btSearch").click()
+            driver.find_element("id", "ctl00_ContentPlaceHolder1_btSearch").click()  # 8/13/2022 Correction to deprecation error implemented here.
             time.sleep(1)
 
             # Pass the HTML contents to Beautiful Soup for parsing.
@@ -79,9 +88,6 @@ def baltimore_city_scraper(citations_or_violations = "violations"):
         except:
             print(f'error in {city}')
 
-    # generate scrapper_output excel file.
-    #scrapper_output.to_excel("BaltimoreCity_%s_raw.xlsx"%citations_or_violations, index=False)
-
     # quit from the web driver
     driver.quit()
     
@@ -91,6 +97,12 @@ def baltimore_city_scraper(citations_or_violations = "violations"):
     
     # Return the Dataframe
     return scrapper_output
+
+
+
+
+
+
 
 
 
